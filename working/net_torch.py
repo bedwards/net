@@ -4,6 +4,8 @@
 # In[1]:
 
 
+print("Hello world", flush=True)
+
 try:
     get_ipython().run_line_magic("reset", "-f")
 except NameError:
@@ -22,8 +24,15 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import KFold
+
+print("Importing torch", flush=True)
 import torch
+
+print("torch imported", flush=True)
+
 from torch.utils.data import Dataset, DataLoader
+import torch.nn as nn
+import torch.nn.functional as F
 
 if is_notebook:
     import matplotlib.pyplot as plt
@@ -433,69 +442,124 @@ print(train.select_dtypes("float64").columns)
 
 
 X_df = train.drop(["Season", "DayNum", "TeamID_1", "TeamID_2", "Margin"], axis=1)
-X = X_df.values
+
 print(X_df.columns)
 print()
 print(sorted(set(train.columns) - set(X_df.columns)))
 print()
 
+X = X_df.values
+X = StandardScaler().fit_transform(X)
+
 y = train["Margin"].values.reshape(-1, 1)
+y = StandardScaler().fit_transform(y)
 
 print(
     f"{'detailed_results':<16} {detailed_results.shape[0]:>7,} {detailed_results.shape[1]:>3} {detailed_results['WSeason'].min()} {detailed_results['WSeason'].max()}"
 )
+
 print(
     f"{'train':<16} {train.shape[0]:>7,} {train.shape[1]:>3} {train['Season'].min()} {train['Season'].max()}"
 )
+
 print(f"{'X':<16} {X.shape[0]:>7,} {X.shape[1]:>3}")
 print(f"{'y':<16} {y.shape[0]:>7,} {y.shape[1]:>3}")
-
-
-# In[14]:
-
-
-scaler_X = StandardScaler()
-scaler_y = StandardScaler()
-X_scaled = scaler_X.fit_transform(X)
-y_scaled = scaler_y.fit_transform(y)
 
 
 # In[15]:
 
 
-class RegressionDataset(Dataset):
-    def __init__(self, X, y):
+class NetDataset(Dataset):
+    def __init__(self, X, y, device="cpu"):
         self.X = torch.tensor(X, dtype=torch.float32)
         self.y = torch.tensor(y, dtype=torch.float32)
+        self.device = device
 
     def __len__(self):
         return len(self.X)
 
     def __getitem__(self, idx):
-        return self.X[idx], self.y[idx]
+        return self.X[idx].to(self.device), self.y[idx].to(self.device)
 
 
-# In[16]:
+class NetModule(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.fc1 = nn.Linear(X.shape[1], 128)
+        self.fc2 = nn.Linear(128, 64)
+        self.fc3 = nn.Linear(64, 1)
+
+    def forward(self, x):
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        return self.fc3(x)
 
 
-dataset = RegressionDataset(X_scaled, y_scaled)
-dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
+n_folds = 5
+n_epochs_per_fold = 100
+kf = KFold(n_splits=n_folds, shuffle=True, random_state=42)
+device = "cuda" if torch.cuda.is_available() else "cpu"
+criterion = nn.MSELoss()
+criterion = criterion.to(device)
 
+for fold_n, (i_fold, i_oof) in enumerate(kf.split(X)):
+    print(f"fold {fold_n+1}/{n_folds}")
 
-# In[17]:
+    load_fold = DataLoader(
+        NetDataset(X[i_fold], y[i_fold], device),
+        batch_size=128,
+        shuffle=True,
+    )
 
+    load_oof = DataLoader(
+        NetDataset(X[i_oof], y[i_oof], device),
+        batch_size=128,
+        shuffle=False,
+    )
 
-n_splits = 5
-kf = KFold(n_splits=n_splits, shuffle=True, random_state=42)
+    m = NetModule()
+    m.to(device)
+    m.train()
+    optim = torch.optim.Adam(m.parameters())
+    loss_oof_min = float("inf")
 
-for fold, (train_idx, val_idx) in enumerate(kf.split(X_scaled)):
-    print(f"Training fold {fold+1}/{n_splits}")
-    X_train, X_val = X_scaled[train_idx], X_scaled[val_idx]
-    y_train, y_val = y_scaled[train_idx], y_scaled[val_idx]
-    train_dataset = RegressionDataset(X_train, y_train)
-    val_dataset = RegressionDataset(X_val, y_val)
-    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
+    for epoch_n in range(n_epochs_per_fold):
+        print(f"  epoch {epoch_n+1}/{n_epochs_per_fold} ", end="", flush=True)
+        loss_epoch = 0.0
+
+        for inputs_fold, targets_fold in load_fold:
+            optim.zero_grad()
+            outputs_fold = m(inputs_fold)
+            loss = criterion(outputs_fold, targets_fold)
+            loss.backward()
+            optim.step()
+            loss_epoch += loss.item()
+
+        print(f"fold={loss_epoch / len(load_fold):.4f} ", end="", flush=True)
+
+        m.eval()
+        loss_oof = 0.0
+
+        with torch.no_grad():
+            for inputs_oof, targets_oof in load_oof:
+                outputs_oof = m(inputs_oof)
+                loss = criterion(outputs_oof, targets_oof)
+                loss_oof += loss.item()
+
+        loss_oof = loss_oof / len(load_oof)
+        print(f"oof={loss_oof:.4f} ", end="", flush=True)
+        m.train()
+
+        if loss_oof_min > loss_oof:
+            loss_oof_min = loss_oof
+            torch.save(m.state_dict(), f"netmodule_{fold_n}.pt")
+            print("*", flush=True)
+            patience = 0
+        else:
+            patience += 1
+            print(flush=True)
+            if patience > 7:
+                break
 
 
 # In[ ]:

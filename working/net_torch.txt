@@ -1,3 +1,6 @@
+Hello world
+Importing torch
+torch imported
 MNCAATourneyDetailedResults     1,382 33 2003 2024
 MRegularSeasonDetailedResults 117,748 33 2003 2025
 WNCAATourneyDetailedResults       894 33 2010 2024
@@ -148,8 +151,7 @@ detailed_results 200,650  33 2003 2025
 train            200,650 413 2003 2025
 X                200,650 408
 y                200,650   1
-Training fold 1/5
-Training fold 2/5
-Training fold 3/5
-Training fold 4/5
-Training fold 5/5
+fold 1/5
+  epoch 1/100 fold=0.4518 oof=0.4384 *
+  epoch 2/100 fold=0.4418 oof=0.4408 
+  epoch 3/100 
