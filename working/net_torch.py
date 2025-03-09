@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 print("Hello world", flush=True)
@@ -20,6 +20,7 @@ import warnings
 
 warnings.simplefilter("ignore")
 
+import os
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
@@ -44,13 +45,15 @@ if is_notebook:
     plt.rcParams["figure.figsize"] = (10, 2)
 
 
-# In[2]:
+# In[ ]:
 
 
 data_dir = f"../datasets/march-machine-learning-mania-2025"
+if not os.path.isdir(data_dir):
+    data_dir = f"../input/march-machine-learning-mania-2025"
 
 
-# In[3]:
+# In[ ]:
 
 
 def read_detailed_results(fn):
@@ -96,7 +99,7 @@ if is_notebook:
     plt.ylabel("Games")
 
 
-# In[4]:
+# In[ ]:
 
 
 margin = detailed_results[
@@ -141,7 +144,7 @@ if is_notebook:
     )
 
 
-# In[5]:
+# In[ ]:
 
 
 def from_WL_to_od(from_prefix, to_suffix):
@@ -226,7 +229,7 @@ if is_notebook:
     plt.xticks(rotation=90)
 
 
-# In[6]:
+# In[ ]:
 
 
 season_sum = (
@@ -246,7 +249,7 @@ season_sum = season_sum.rename(columns={"Score_o_count": "Games"})
 p(season_sum)
 
 
-# In[7]:
+# In[ ]:
 
 
 def from_sum_to_pct(sum_df, prefix=""):
@@ -328,7 +331,7 @@ if is_notebook:
     )
 
 
-# In[8]:
+# In[ ]:
 
 
 game_sos = pd.merge(
@@ -365,7 +368,7 @@ if is_notebook:
     plt.show()
     df = df[df["Games"] == 6]
     df = df[df["TeamID"] < df["Opponent"]].reset_index(drop=True)
-    mteams = pd.read_csv(f"{data_dir}/Mteams.csv")
+    mteams = pd.read_csv(f"{data_dir}/MTeams.csv")
     df["Team_1"] = pd.merge(df, mteams, left_on="TeamID", right_on="TeamID")["TeamName"]
     df["Team_2"] = pd.merge(df, mteams, left_on="Opponent", right_on="TeamID")[
         "TeamName"
@@ -384,7 +387,7 @@ if is_notebook:
 # 6 2/24/2021 L 75-86
 # ```
 
-# In[9]:
+# In[ ]:
 
 
 sum_sos = (
@@ -395,21 +398,21 @@ sum_sos = (
 p(sum_sos[(sum_sos["Season"] > 2021) & (sum_sos["TeamID"] == 1196)])
 
 
-# In[10]:
+# In[ ]:
 
 
 season_sos = from_sum_to_pct(sum_sos, prefix="sos_")
 p(season_sos[(sum_sos["Season"] > 2021) & (season_sos["TeamID"] == 1196)])
 
 
-# In[11]:
+# In[ ]:
 
 
 season = pd.merge(season_team, season_sos, on=["Season", "TeamID"])
 p(season)
 
 
-# In[12]:
+# In[ ]:
 
 
 train = pd.merge(
@@ -438,7 +441,7 @@ print()
 print(train.select_dtypes("float64").columns)
 
 
-# In[13]:
+# In[ ]:
 
 
 X_df = train.drop(["Season", "DayNum", "TeamID_1", "TeamID_2", "Margin"], axis=1)
@@ -466,7 +469,7 @@ print(f"{'X':<16} {X.shape[0]:>7,} {X.shape[1]:>3}")
 print(f"{'y':<16} {y.shape[0]:>7,} {y.shape[1]:>3}")
 
 
-# In[15]:
+# In[ ]:
 
 
 class NetDataset(Dataset):
