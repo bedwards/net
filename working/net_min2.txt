@@ -1,0 +1,69 @@
+reading train.csv
+
+train:           (202033, 413)
+X_df:            (202033, 408)
+X:    torch.Size([202033, 408])
+y_df:            (202033, 1)
+y:    torch.Size([202033])
+
+fold 1
+  epoch     10: fold=3.3661 oof=3.3945
+  epoch     20: fold=3.2948 oof=3.3242
+  epoch     30: fold=3.2273 oof=3.2577
+  epoch     40: fold=3.1639 oof=3.1952
+  epoch     50: fold=3.1045 oof=3.1367
+  epoch     60: fold=3.0490 oof=3.0821
+  epoch     70: fold=2.9972 oof=3.0313
+  epoch     80: fold=2.9491 oof=2.9839
+  epoch     90: fold=2.9043 oof=2.9399
+  epoch    100: fold=2.8627 oof=2.8990
+
+fold 2
+  epoch     10: fold=3.0478 oof=3.0824
+  epoch     20: fold=3.0156 oof=3.0499
+  epoch     30: fold=2.9844 oof=3.0186
+  epoch     40: fold=2.9544 oof=2.9883
+  epoch     50: fold=2.9254 oof=2.9591
+  epoch     60: fold=2.8974 oof=2.9309
+  epoch     70: fold=2.8704 oof=2.9036
+  epoch     80: fold=2.8442 oof=2.8772
+  epoch     90: fold=2.8189 oof=2.8516
+  epoch    100: fold=2.7942 oof=2.8267
+
+fold 3
+  epoch     10: fold=2.5892 oof=2.6285
+  epoch     20: fold=2.5422 oof=2.5814
+  epoch     30: fold=2.4984 oof=2.5374
+  epoch     40: fold=2.4579 oof=2.4967
+  epoch     50: fold=2.4205 oof=2.4592
+  epoch     60: fold=2.3861 oof=2.4247
+  epoch     70: fold=2.3546 oof=2.3931
+  epoch     80: fold=2.3257 oof=2.3641
+  epoch     90: fold=2.2992 oof=2.3374
+  epoch    100: fold=2.2747 oof=2.3128
+
+fold 4
+  epoch     10: fold=2.9227 oof=2.9206
+  epoch     20: fold=2.8516 oof=2.8500
+  epoch     30: fold=2.7844 oof=2.7833
+  epoch     40: fold=2.7213 oof=2.7207
+  epoch     50: fold=2.6624 oof=2.6621
+  epoch     60: fold=2.6074 oof=2.6076
+  epoch     70: fold=2.5563 oof=2.5569
+  epoch     80: fold=2.5088 oof=2.5098
+  epoch     90: fold=2.4648 oof=2.4662
+  epoch    100: fold=2.4240 oof=2.4258
+
+fold 5
+  epoch     10: fold=2.4750 oof=2.4607
+  epoch     20: fold=2.4598 oof=2.4455
+  epoch     30: fold=2.4453 oof=2.4310
+  epoch     40: fold=2.4314 oof=2.4170
+  epoch     50: fold=2.4178 oof=2.4033
+  epoch     60: fold=2.4045 oof=2.3900
+  epoch     70: fold=2.3913 oof=2.3768
+  epoch     80: fold=2.3783 oof=2.3637
+  epoch     90: fold=2.3655 oof=2.3508
+  epoch    100: fold=2.3527 oof=2.3380
+
+Score: 0.4544
