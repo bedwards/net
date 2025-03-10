@@ -1,0 +1,7 @@
+SampleSubmissionStage2: (131407, 3)
+reading season_2025.csv
+train:              (726, 206)
+['Season', 'TeamID_1', 'TeamID_2']
+['Season', 'TeamID', 'Score_pg_o', 'Score_poss_o', 'FGM_pg_o', 'FGM_poss_o', 'FGA_pg_o']
+['Season', 'TeamID_1', 'TeamID_2', 'Score_pg_o_1', 'Score_poss_o_1', 'FGM_pg_o_1', 'FGM_poss_o_1']
+['sos_FGPct_diff_2', 'sos_FGPct3_diff_2', 'sos_FTPct_diff_2', 'sos_AstPct_diff_2', 'sos_AstTO_diff_2']
