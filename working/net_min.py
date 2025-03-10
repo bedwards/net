@@ -1,10 +1,22 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[38]:
+# In[21]:
 
 
+get_ipython().run_line_magic("reset", "-f")
+
+import numpy as np
 import pandas as pd
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import KFold
+import xgboost as xgb
+import torch
+import torch.nn.functional as F
+
+
+# In[22]:
+
 
 train = pd.read_csv("../datasets/net/train.csv")
 train = pd.concat(
@@ -16,52 +28,89 @@ train = pd.concat(
 )
 
 
-# In[39]:
+# In[23]:
 
 
 def margin_to_prob(margin):
-    return 1 / (1 + torch.exp(-margin * 0.25))
+    return 1 / (1 + np.exp(-margin * 0.25))
 
 
-def brier_score(probs, outcomes, chunk_size=10000):
-    total_score = 0
-    n_samples = probs.shape[0]
-
-    for i in range(0, n_samples, chunk_size):
-        end = min(i + chunk_size, n_samples)
-        chunk_score = torch.mean((probs[i:end] - outcomes[i:end]) ** 2)
-        total_score += chunk_score * (end - i)
-
-    return total_score / n_samples
+def brier_score(y_pred, y_true):
+    probs = margin_to_prob(y_pred)
+    outcomes = (y_true > 0).astype(float)
+    return np.mean((probs - outcomes) ** 2)
 
 
-# In[40]:
+# In[24]:
 
 
-from sklearn.preprocessing import StandardScaler
-import torch
+X_ = train.drop(columns=["Season", "DayNum", "TeamID_1", "TeamID_2", "Margin"])
+X_ = X_.values
+X_ = StandardScaler().fit_transform(X_)
 
-X = train.drop(columns=["Season", "DayNum", "TeamID_1", "TeamID_2", "Margin"])
-X = X.values
-X = StandardScaler().fit_transform(X)
-X = torch.as_tensor(X, dtype=torch.float32, device="cuda")
-
-y = train["Margin"].values.reshape(-1, 1)
-y = StandardScaler().fit_transform(y)
-y = torch.as_tensor(y, dtype=torch.float32, device="cuda")
+y_orig = train["Margin"].values
+y_scaler = StandardScaler()
+y_ = y_scaler.fit_transform(y_orig.reshape(-1, 1)).flatten()
 
 
-# In[41]:
+# In[25]:
 
 
-from sklearn.model_selection import KFold
-import torch.nn.functional as F
+n_folds = 5
+kfold = KFold(n_splits=n_folds, shuffle=True, random_state=42)
+
+
+# In[26]:
+
+
+y_pred_oof = np.zeros(y_.shape[0])
+
+for fold_n, (i_fold, i_oof) in enumerate(kfold.split(X_)):
+    print(f"XGBoost Fold {fold_n}")
+
+    dtrain = xgb.DMatrix(X_[i_fold], label=y_[i_fold])
+    dval = xgb.DMatrix(X_[i_oof], label=y_[i_oof])
+
+    params = {
+        "objective": "reg:squarederror",
+        "eval_metric": "rmse",
+        "eta": 0.1,
+        "max_depth": 6,
+        "subsample": 0.8,
+        "colsample_bytree": 0.8,
+        "tree_method": "gpu_hist",
+        "gpu_id": 0,
+    }
+
+    model = xgb.train(
+        params,
+        dtrain,
+        num_boost_round=100,
+        evals=[(dtrain, "train"), (dval, "val")],
+        early_stopping_rounds=20,
+        verbose_eval=20,
+    )
+
+    y_pred_oof[i_oof] = model.predict(dval)
+
+y_pred_oof = y_scaler.inverse_transform(y_pred_oof.reshape(-1, 1)).flatten()
+score = brier_score(y_pred_oof, y_orig)
+print(f"XGBoost score: {score:.4f}")
+
+
+# In[27]:
+
+
+X = torch.as_tensor(X_, dtype=torch.float32, device="cuda")
+y = torch.as_tensor(y_, dtype=torch.float32, device="cuda")
+
+
+# In[ ]:
+
 
 hidden_size = 64
 loss_fn = torch.nn.MSELoss()
-n_epochs = 1_000
-n_folds = 5
-kfold = KFold(n_splits=n_folds, shuffle=True, random_state=42)
+n_epochs = 10_000
 y_pred_oof = torch.zeros(y.shape[0], requires_grad=False, device="cuda")
 
 for fold_n, (i_fold, i_oof) in enumerate(kfold.split(X)):
@@ -94,7 +143,10 @@ for fold_n, (i_fold, i_oof) in enumerate(kfold.split(X)):
             F.relu(X[i_oof] @ weights1 + bias1) @ weights2 + bias2
         ).flatten()
 
-score = brier_score(margin_to_prob(y_pred_oof), (y > 0).float())
+y_pred_oof = y_scaler.inverse_transform(
+    y_pred_oof.cpu().numpy().reshape(-1, 1)
+).flatten()
+score = brier_score(y_pred_oof, y_orig)
 print(f"Score: {score.item():.4f}")
 
 
