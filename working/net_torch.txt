@@ -151,5 +151,231 @@ detailed_results 200,650  33 2003 2025
 train            200,650 413 2003 2025
 X                200,650 408
 y                200,650   1
-fold 1/5
-  epoch 1/100 fold=0.4515 
+fold 1/5 (0.005672 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 1/100 fold=0.4561 oof=0.4388 * (2.868589 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 2/100 fold=0.4400 oof=0.4391 (4.660908 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 3/100 fold=0.4378 oof=0.4386 * (6.448958 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 4/100 fold=0.4359 oof=0.4384 * (8.272747 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 5/100 fold=0.4344 oof=0.4392 (10.303776 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 6/100 fold=0.4337 oof=0.4378 * (12.49877 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 7/100 fold=0.4329 oof=0.4374 * (14.90135 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 8/100 fold=0.4318 oof=0.4400 (17.140594 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 9/100 fold=0.4307 oof=0.4403 (19.41427 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 10/100 fold=0.4295 oof=0.4415 (21.646365 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 11/100 fold=0.4290 oof=0.4419 (24.028065 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 12/100 fold=0.4273 oof=0.4425 (26.412272 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 13/100 fold=0.4265 oof=0.4427 (28.784184 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 14/100 fold=0.4260 oof=0.4435 (30.977806 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 15/100 fold=0.4239 oof=0.4438 (33.677852 seconds)
+| ID | GPU | MEM |
+------------------
+fold 2/5 (33.701952 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 1/100 fold=0.4542 oof=0.4431 * (36.370677 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 2/100 fold=0.4398 oof=0.4410 * (38.630064 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 3/100 fold=0.4372 oof=0.4406 * (40.83234 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 4/100 fold=0.4358 oof=0.4381 * (43.111043 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 5/100 fold=0.4342 oof=0.4407 (45.391559 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 6/100 fold=0.4336 oof=0.4402 (47.648218 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 7/100 fold=0.4320 oof=0.4383 (49.858807 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 8/100 fold=0.4316 oof=0.4380 * (52.10357 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 9/100 fold=0.4303 oof=0.4396 (54.296867 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 10/100 fold=0.4293 oof=0.4410 (56.617664 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 11/100 fold=0.4285 oof=0.4413 (58.734024 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 12/100 fold=0.4278 oof=0.4408 (60.885261 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 13/100 fold=0.4259 oof=0.4448 (63.278631 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 14/100 fold=0.4249 oof=0.4434 (65.640566 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 15/100 fold=0.4238 oof=0.4448 (67.999607 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 16/100 fold=0.4220 oof=0.4479 (70.365362 seconds)
+| ID | GPU | MEM |
+------------------
+fold 3/5 (70.392219 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 1/100 fold=0.4543 oof=0.4456 * (72.950908 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 2/100 fold=0.4391 oof=0.4431 * (75.206034 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 3/100 fold=0.4368 oof=0.4445 (77.494687 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 4/100 fold=0.4346 oof=0.4421 * (79.998391 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 5/100 fold=0.4333 oof=0.4424 (82.335679 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 6/100 fold=0.4327 oof=0.4429 (84.49623 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 7/100 fold=0.4319 oof=0.4448 (86.645113 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 8/100 fold=0.4300 oof=0.4424 (88.828308 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 9/100 fold=0.4293 oof=0.4427 (90.955291 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 10/100 fold=0.4290 oof=0.4451 (93.068495 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 11/100 fold=0.4280 oof=0.4429 (95.202847 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 12/100 fold=0.4262 oof=0.4447 (97.489173 seconds)
+| ID | GPU | MEM |
+------------------
+fold 4/5 (97.515368 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 1/100 fold=0.4554 oof=0.4386 * (100.054854 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 2/100 fold=0.4397 oof=0.4403 (102.292442 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 3/100 fold=0.4369 oof=0.4382 * (104.540369 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 4/100 fold=0.4357 oof=0.4410 (106.8809 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 5/100 fold=0.4345 oof=0.4393 (109.050447 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 6/100 fold=0.4334 oof=0.4374 * (111.201735 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 7/100 fold=0.4321 oof=0.4390 (113.594098 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 8/100 fold=0.4312 oof=0.4427 (115.955672 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 9/100 fold=0.4300 oof=0.4396 (118.192035 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 10/100 fold=0.4298 oof=0.4391 (120.321586 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 11/100 fold=0.4283 oof=0.4404 (122.502169 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 12/100 fold=0.4274 oof=0.4401 (124.640404 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 13/100 fold=0.4264 oof=0.4402 (126.838372 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 14/100 fold=0.4252 oof=0.4425 (129.056707 seconds)
+| ID | GPU | MEM |
+------------------
+fold 5/5 (129.08382 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 1/100 fold=0.4548 oof=0.4436 * (131.605151 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 2/100 fold=0.4396 oof=0.4429 * (135.675212 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 3/100 fold=0.4373 oof=0.4402 * (139.549134 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 4/100 fold=0.4355 oof=0.4391 * (143.866911 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 5/100 fold=0.4340 oof=0.4408 (147.880581 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 6/100 fold=0.4338 oof=0.4389 * (151.679763 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 7/100 fold=0.4325 oof=0.4430 (155.490447 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 8/100 fold=0.4313 oof=0.4420 (159.296505 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 9/100 fold=0.4301 oof=0.4395 (163.339343 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 10/100 fold=0.4294 oof=0.4417 (166.873267 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 11/100 fold=0.4282 oof=0.4424 (170.496071 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 12/100 fold=0.4277 oof=0.4426 (174.208023 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 13/100 fold=0.4265 oof=0.4451 (177.72409 seconds)
+| ID | GPU | MEM |
+------------------
+  epoch 14/100 fold=0.4253 oof=0.4441 (181.705937 seconds)
+| ID | GPU | MEM |
+------------------

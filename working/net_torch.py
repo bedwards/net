@@ -4,6 +4,15 @@
 # In[ ]:
 
 
+try:
+    get_ipython().system("pip install GPUtil")
+except NameError:
+    pass
+
+
+# In[1]:
+
+
 print("Hello world", flush=True)
 
 try:
@@ -21,10 +30,13 @@ import warnings
 warnings.simplefilter("ignore")
 
 import os
+from datetime import datetime
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import KFold
+from sklearn.metrics import brier_score_loss
+import GPUtil
 
 print("Importing torch", flush=True)
 import torch
@@ -45,7 +57,7 @@ if is_notebook:
     plt.rcParams["figure.figsize"] = (10, 2)
 
 
-# In[ ]:
+# In[2]:
 
 
 data_dir = f"../datasets/march-machine-learning-mania-2025"
@@ -53,7 +65,7 @@ if not os.path.isdir(data_dir):
     data_dir = f"../input/march-machine-learning-mania-2025"
 
 
-# In[ ]:
+# In[3]:
 
 
 def read_detailed_results(fn):
@@ -65,7 +77,8 @@ def read_detailed_results(fn):
     df = df.drop(columns=["NumOT", "WLoc"])
     assert all(df[c].dtype == "int32" for c in df)
     print(
-        f"{fn:<29} {df.shape[0]:>7,} {df.shape[1]:>2} {df['WSeason'].min()} {df['WSeason'].max()}"
+        f"{fn:<29} {df.shape[0]:>7,} {df.shape[1]:>2} {df['WSeason'].min()} {df['WSeason'].max()}",
+        flush=True,
     )
     return df
 
@@ -85,10 +98,11 @@ detailed_results = pd.concat(
 ).reset_index(drop=True)
 
 print(
-    f"{'-'*50}\n{'detailed_results':<29} {detailed_results.shape[0]:>7,} {detailed_results.shape[1]:>2} {detailed_results['WSeason'].min()} {detailed_results['WSeason'].max()}"
+    f"{'-'*50}\n{'detailed_results':<29} {detailed_results.shape[0]:>7,} {detailed_results.shape[1]:>2} {detailed_results['WSeason'].min()} {detailed_results['WSeason'].max()}",
+    flush=True,
 )
 assert 1 == len([c for c in detailed_results if c[0] not in ("W", "L")])
-print(f"\n{[c[1:] for c in detailed_results if c[0] == 'W']}\n")
+print(f"\n{[c[1:] for c in detailed_results if c[0] == 'W']}\n", flush=True)
 
 if is_notebook:
     sns.histplot(detailed_results["WSeason"])
@@ -99,7 +113,7 @@ if is_notebook:
     plt.ylabel("Games")
 
 
-# In[ ]:
+# In[4]:
 
 
 margin = detailed_results[
@@ -131,7 +145,7 @@ margin = margin.drop(columns=["WTeamID", "LTeamID", "WScore", "LScore"])
 
 p(margin)
 margin.info()
-print()
+print(flush=True)
 
 if is_notebook:
     sns.lineplot(
@@ -144,7 +158,7 @@ if is_notebook:
     )
 
 
-# In[ ]:
+# In[5]:
 
 
 def from_WL_to_od(from_prefix, to_suffix):
@@ -229,7 +243,7 @@ if is_notebook:
     plt.xticks(rotation=90)
 
 
-# In[ ]:
+# In[6]:
 
 
 season_sum = (
@@ -249,7 +263,7 @@ season_sum = season_sum.rename(columns={"Score_o_count": "Games"})
 p(season_sum)
 
 
-# In[ ]:
+# In[7]:
 
 
 def from_sum_to_pct(sum_df, prefix=""):
@@ -301,7 +315,7 @@ def from_sum_to_pct(sum_df, prefix=""):
 season_team = from_sum_to_pct(season_sum)
 p(season_team)
 season_team.info()
-print()
+print(flush=True)
 
 if is_notebook:
     sns.lineplot(
@@ -331,7 +345,7 @@ if is_notebook:
     )
 
 
-# In[ ]:
+# In[8]:
 
 
 game_sos = pd.merge(
@@ -348,7 +362,8 @@ game_sos = game_sos.rename(
 )
 
 print(
-    "The season stats (simple sums and possessions) for each opponent of TeamID (multiple rows for multiple matchups throughout the season)"
+    "The season stats (simple sums and possessions) for each opponent of TeamID (multiple rows for multiple matchups throughout the season)",
+    flush=True,
 )
 p(game_sos)
 
@@ -387,7 +402,7 @@ if is_notebook:
 # 6 2/24/2021 L 75-86
 # ```
 
-# In[ ]:
+# In[9]:
 
 
 sum_sos = (
@@ -398,21 +413,21 @@ sum_sos = (
 p(sum_sos[(sum_sos["Season"] > 2021) & (sum_sos["TeamID"] == 1196)])
 
 
-# In[ ]:
+# In[10]:
 
 
 season_sos = from_sum_to_pct(sum_sos, prefix="sos_")
 p(season_sos[(sum_sos["Season"] > 2021) & (season_sos["TeamID"] == 1196)])
 
 
-# In[ ]:
+# In[11]:
 
 
 season = pd.merge(season_team, season_sos, on=["Season", "TeamID"])
 p(season)
 
 
-# In[ ]:
+# In[12]:
 
 
 train = pd.merge(
@@ -438,10 +453,10 @@ train = train.sort_values(["Season", "DayNum", "TeamID_1", "TeamID_2"]).reset_in
 # p(train)
 train.info()
 print()
-print(train.select_dtypes("float64").columns)
+print(train.select_dtypes("float64").columns, flush=True)
 
 
-# In[ ]:
+# In[13]:
 
 
 X_df = train.drop(["Season", "DayNum", "TeamID_1", "TeamID_2", "Margin"], axis=1)
@@ -466,10 +481,10 @@ print(
 )
 
 print(f"{'X':<16} {X.shape[0]:>7,} {X.shape[1]:>3}")
-print(f"{'y':<16} {y.shape[0]:>7,} {y.shape[1]:>3}")
+print(f"{'y':<16} {y.shape[0]:>7,} {y.shape[1]:>3}", flush=True)
 
 
-# In[ ]:
+# In[15]:
 
 
 class NetDataset(Dataset):
@@ -504,19 +519,24 @@ kf = KFold(n_splits=n_folds, shuffle=True, random_state=42)
 device = "cuda" if torch.cuda.is_available() else "cpu"
 criterion = nn.MSELoss()
 criterion = criterion.to(device)
+start = datetime.now()
 
 for fold_n, (i_fold, i_oof) in enumerate(kf.split(X)):
-    print(f"fold {fold_n+1}/{n_folds}")
+    print(
+        f"fold {fold_n+1}/{n_folds} ({(datetime.now() - start).total_seconds()} seconds)",
+        flush=True,
+    )
+    GPUtil.showUtilization()
 
     load_fold = DataLoader(
         NetDataset(X[i_fold], y[i_fold], device),
-        batch_size=128,
+        batch_size=512,
         shuffle=True,
     )
 
     load_oof = DataLoader(
         NetDataset(X[i_oof], y[i_oof], device),
-        batch_size=128,
+        batch_size=512,
         shuffle=False,
     )
 
@@ -556,13 +576,42 @@ for fold_n, (i_fold, i_oof) in enumerate(kf.split(X)):
         if loss_oof_min > loss_oof:
             loss_oof_min = loss_oof
             torch.save(m.state_dict(), f"netmodule_{fold_n}.pt")
-            print("*", flush=True)
+            print(f"* ({(datetime.now() - start).total_seconds()} seconds)", flush=True)
+            GPUtil.showUtilization()
             patience = 0
         else:
             patience += 1
-            print(flush=True)
+            print(f"({(datetime.now() - start).total_seconds()} seconds)", flush=True)
+            GPUtil.showUtilization()
             if patience > 7:
                 break
 
 
 # In[ ]:
+
+
+sample_sub = pd.read_csv(f"{data_dir}/SampleSubmissionStage2.csv")
+m_teams = pd.read_csv(f"{data_dir}/MTeams.csv")
+w_teams = pd.read_csv(f"{data_dir}/WTeams.csv")
+
+sample_sub[["Season", "Team1", "Team2"]] = (
+    sample_sub["ID"].str.split("_", expand=True).astype(int)
+)
+
+predictions = model.predict(X_submit)
+win_probs = 1 / (1 + np.exp(-predictions * 0.25))
+
+sample_sub["Pred"] = win_probs
+sample_sub[["ID", "Pred"]].to_csv("submission.csv", index=False)
+
+np.random.seed(42)
+binary_preds = (np.random.random(len(win_probs)) < win_probs).astype(float)
+sample_sub["Pred"] = binary_preds
+sample_sub[["ID", "Pred"]].to_csv("submission1.csv", index=False)
+
+try:
+    y_true = (train["Spread_1"] > 0).astype(int)
+    brier_score = brier_score_loss(y_true, y_pred_prob)
+    print(f"\nBrier score: {brier_score:.4f}")
+except NameError:
+    print("\nBrier score calculation skipped - validation data not available")
