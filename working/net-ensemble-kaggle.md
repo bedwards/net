@@ -33,6 +33,7 @@ import warnings
 
 warnings.simplefilter("ignore")
 
+import json
 import numpy as np
 import pandas as pd
 import xgboost as xgb
@@ -42,6 +43,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import KFold
 import cudf
 import GPUtil
+import joblib
 
 if torch.cuda.is_available():
     device = "cuda"
@@ -128,6 +130,7 @@ def brier_score(y_pred_oof):
 
 ```python
 print(f"xgboost")
+xgb_models = []
 y_pred_oof = np.zeros(y_s.shape[0])
 
 for fold_n, (i_fold, i_oof) in enumerate(kfold.split(X_df.index), 1):
@@ -156,12 +159,18 @@ for fold_n, (i_fold, i_oof) in enumerate(kfold.split(X_df.index), 1):
         eval_set=[(X_fold, y_fold), (X_oof, y_oof)],
     )
 
+    xgb_models.append(m)
     y_pred_oof[i_oof] = m.predict(X_oof)
     GPUtil.showUtilization()
     print()
 
 score = brier_score(y_pred_oof)
 print(f"xgboost score: {score:.4f}")
+
+for fold_n, m in enumerate(xgb_models, 1):
+    fn = f"xgb_{f'{score:.4f}'[2:6]}_{fold_n}.zip"
+    joblib.dump(m, fn, compress=3)
+    print(f"wrote {fn}")
 ```
 
     xgboost
@@ -173,7 +182,7 @@ print(f"xgboost score: {score:.4f}")
     [1999]	validation_0-rmse:10.83845	validation_1-rmse:11.07211
     | ID | GPU | MEM |
     ------------------
-    |  0 | 11% |  4% |
+    |  0 | 51% |  4% |
     |  1 |  0% |  0% |
     
       fold 2
@@ -184,7 +193,7 @@ print(f"xgboost score: {score:.4f}")
     [1999]	validation_0-rmse:10.85455	validation_1-rmse:10.99577
     | ID | GPU | MEM |
     ------------------
-    |  0 | 24% |  4% |
+    |  0 | 43% |  4% |
     |  1 |  0% |  0% |
     
       fold 3
@@ -195,7 +204,7 @@ print(f"xgboost score: {score:.4f}")
     [1999]	validation_0-rmse:10.84202	validation_1-rmse:11.06395
     | ID | GPU | MEM |
     ------------------
-    |  0 | 20% |  4% |
+    |  0 | 52% |  4% |
     |  1 |  0% |  0% |
     
       fold 4
@@ -206,7 +215,7 @@ print(f"xgboost score: {score:.4f}")
     [1999]	validation_0-rmse:10.84942	validation_1-rmse:11.04161
     | ID | GPU | MEM |
     ------------------
-    |  0 | 23% |  4% |
+    |  0 | 40% |  4% |
     |  1 |  0% |  0% |
     
       fold 5
@@ -217,10 +226,15 @@ print(f"xgboost score: {score:.4f}")
     [1999]	validation_0-rmse:10.84913	validation_1-rmse:11.03351
     | ID | GPU | MEM |
     ------------------
-    |  0 | 50% |  4% |
+    |  0 | 38% |  4% |
     |  1 |  0% |  0% |
     
     xgboost score: 0.1660
+    wrote xgb_1660_1.zip
+    wrote xgb_1660_2.zip
+    wrote xgb_1660_3.zip
+    wrote xgb_1660_4.zip
+    wrote xgb_1660_5.zip
 
 
 
@@ -241,9 +255,36 @@ y = torch.tensor(
 )
 print(f"y:    {y.shape}")
 
+
+def weight(*size):
+    return torch.nn.Parameter(0.1 * torch.randn(*size, device=device))
+
+
+def bias(*size):
+    return torch.nn.Parameter(torch.zeros(*size, device=device))
+
+
+mse_ = torch.nn.MSELoss()
+
+
+def mse(y_pred_epoch, i):
+    return loss_fn(y_pred_epoch, y[i].view(-1, 1))
+
+
+def aslist(param):
+    return param.cpu().detach().numpy().tolist()
+
+
+def aspy(m):
+    return {
+        "w": [aslist(w) for w in m["w"]],
+        "b": [aslist(b) for b in m["b"]],
+    }
+
+
 n_epochs = 1_000
 hidden_size = 64
-loss_fn = torch.nn.MSELoss()
+torch_models = []
 
 y_pred_oof = torch.zeros(
     y.shape[0],
@@ -255,30 +296,35 @@ y_pred_oof = torch.zeros(
 for fold_n, (i_fold, i_oof) in enumerate(kfold.split(X_df.index), 1):
     print(f"  fold {fold_n}")
 
-    weights1 = torch.nn.Parameter(
-        0.1 * torch.randn(X_df.shape[1], hidden_size, device=device)
-    )
-    bias1 = torch.nn.Parameter(torch.zeros(hidden_size, device=device))
-    weights2 = torch.nn.Parameter(0.1 * torch.randn(hidden_size, 1, device=device))
-    bias2 = torch.nn.Parameter(torch.zeros(1, device=device))
-    optimizer = torch.optim.Adam([weights1, bias1, weights2, bias2], weight_decay=1e-4)
+    m = {
+        "w": [
+            weight(X_df.shape[1], hidden_size),
+            weight(hidden_size, 1),
+        ],
+        "b": [
+            bias(hidden_size),
+            bias(1),
+        ],
+    }
+
+    optimizer = torch.optim.Adam(m["w"] + m["b"], weight_decay=1e-4)
+
+    def forward(i):
+        return (
+            F.leaky_relu(X[i] @ m["w"][0] + m["b"][0], negative_slope=0.1) @ m["w"][1]
+            + m["b"][1]
+        )
 
     for epoch_n in range(1, n_epochs + 1):
-        y_pred_fold_epoch = (
-            F.leaky_relu(X[i_fold] @ weights1 + bias1, negative_slope=0.1) @ weights2
-            + bias2
-        )
-        loss_fold_epoch = loss_fn(y_pred_fold_epoch, y[i_fold].view(-1, 1))
+        y_pred_epoch_fold = forward(i_fold)
+        loss_fold_epoch = mse(y_pred_epoch_fold, i_fold)
         optimizer.zero_grad()
         loss_fold_epoch.backward()
         optimizer.step()
 
         with torch.no_grad():
-            y_pred_oof_epoch = (
-                F.leaky_relu(X[i_oof] @ weights1 + bias1, negative_slope=0.1) @ weights2
-                + bias2
-            )
-            loss_oof_epoch = loss_fn(y_pred_oof_epoch, y[i_oof].view(-1, 1))
+            y_pred_epoch_oof = forward(i_oof)
+            loss_oof_epoch = mse(y_pred_epoch_oof, i_oof)
 
         if epoch_n > (n_epochs - 3):
             print(
@@ -288,12 +334,12 @@ for fold_n, (i_fold, i_oof) in enumerate(kfold.split(X_df.index), 1):
             )
 
     with torch.no_grad():
-        y_pred_oof[i_oof] = (
-            F.leaky_relu(X[i_oof] @ weights1 + bias1, negative_slope=0.1) @ weights2
-            + bias2
-        ).flatten()
+        y_pred_oof[i_oof] = forward(i_oof).flatten()
 
     GPUtil.showUtilization()
+
+    torch_models.append(aspy(m))
+
     print()
 
 y_pred_oof = scaler_y.inverse_transform(
@@ -302,57 +348,68 @@ y_pred_oof = scaler_y.inverse_transform(
 
 score = brier_score(y_pred_oof)
 print(f"torch score:   {score:.4f}")
+
+for fold_n, m in enumerate(torch_models, 1):
+    fn = f"nn_{f'{score:.4f}'[2:6]}_{fold_n}.json"
+    with open(fn, "w") as f:
+        json.dump(m, f)
+    print(f"wrote {fn}")
 ```
 
     torch
     X:    torch.Size([202033, 112])
     y:    torch.Size([202033])
       fold 1
-        epoch    998: fold=0.4324 oof=0.4462
-        epoch    999: fold=0.4324 oof=0.4462
-        epoch   1000: fold=0.4324 oof=0.4462
+        epoch    998: fold=0.4307 oof=0.4456
+        epoch    999: fold=0.4307 oof=0.4457
+        epoch   1000: fold=0.4307 oof=0.4457
     | ID | GPU | MEM |
     ------------------
     |  0 | 87% |  4% |
     |  1 |  0% |  0% |
     
       fold 2
-        epoch    998: fold=0.4340 oof=0.4400
-        epoch    999: fold=0.4340 oof=0.4400
-        epoch   1000: fold=0.4340 oof=0.4400
+        epoch    998: fold=0.4336 oof=0.4400
+        epoch    999: fold=0.4336 oof=0.4400
+        epoch   1000: fold=0.4336 oof=0.4400
     | ID | GPU | MEM |
     ------------------
     |  0 | 88% |  4% |
     |  1 |  0% |  0% |
     
       fold 3
-        epoch    998: fold=0.4330 oof=0.4436
-        epoch    999: fold=0.4330 oof=0.4436
-        epoch   1000: fold=0.4330 oof=0.4436
+        epoch    998: fold=0.4317 oof=0.4445
+        epoch    999: fold=0.4317 oof=0.4446
+        epoch   1000: fold=0.4317 oof=0.4445
+    | ID | GPU | MEM |
+    ------------------
+    |  0 | 80% |  4% |
+    |  1 |  0% |  0% |
+    
+      fold 4
+        epoch    998: fold=0.4333 oof=0.4429
+        epoch    999: fold=0.4333 oof=0.4430
+        epoch   1000: fold=0.4332 oof=0.4429
+    | ID | GPU | MEM |
+    ------------------
+    |  0 | 87% |  4% |
+    |  1 |  0% |  0% |
+    
+      fold 5
+        epoch    998: fold=0.4318 oof=0.4433
+        epoch    999: fold=0.4318 oof=0.4433
+        epoch   1000: fold=0.4318 oof=0.4433
     | ID | GPU | MEM |
     ------------------
     |  0 | 88% |  4% |
     |  1 |  0% |  0% |
     
-      fold 4
-        epoch    998: fold=0.4325 oof=0.4433
-        epoch    999: fold=0.4325 oof=0.4433
-        epoch   1000: fold=0.4325 oof=0.4433
-    | ID | GPU | MEM |
-    ------------------
-    |  0 | 89% |  4% |
-    |  1 |  0% |  0% |
-    
-      fold 5
-        epoch    998: fold=0.4315 oof=0.4420
-        epoch    999: fold=0.4315 oof=0.4419
-        epoch   1000: fold=0.4315 oof=0.4419
-    | ID | GPU | MEM |
-    ------------------
-    |  0 | 89% |  4% |
-    |  1 |  0% |  0% |
-    
-    torch score:   0.1648
+    torch score:   0.1649
+    wrote nn_1649_1.json
+    wrote nn_1649_2.json
+    wrote nn_1649_3.json
+    wrote nn_1649_4.json
+    wrote nn_1649_5.json
 
 
 
