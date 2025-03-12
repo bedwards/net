@@ -24,7 +24,16 @@ if not IS_KAGGLE:
 !pip install gputil
 ```
 
-    Requirement already satisfied: gputil in /usr/local/lib/python3.10/dist-packages (1.4.0)
+    Collecting gputil
+      Downloading GPUtil-1.4.0.tar.gz (5.5 kB)
+      Preparing metadata (setup.py) ... [?25l[?25hdone
+    Building wheels for collected packages: gputil
+      Building wheel for gputil (setup.py) ... [?25l[?25hdone
+      Created wheel for gputil: filename=GPUtil-1.4.0-py3-none-any.whl size=7392 sha256=c12e89fa2bcbd43d0a0518905ecf2b0e1b061b55d5a1a4431e69b1e086af0f0c
+      Stored in directory: /root/.cache/pip/wheels/a9/8a/bd/81082387151853ab8b6b3ef33426e98f5cbfebc3c397a9d4d0
+    Successfully built gputil
+    Installing collected packages: gputil
+    Successfully installed gputil-1.4.0
 
 
 
@@ -43,7 +52,6 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import KFold
 import cudf
 import GPUtil
-import joblib
 
 if torch.cuda.is_available():
     device = "cuda"
@@ -168,8 +176,8 @@ score = brier_score(y_pred_oof)
 print(f"xgboost score: {score:.4f}")
 
 for fold_n, m in enumerate(xgb_models, 1):
-    fn = f"xgb_{f'{score:.4f}'[2:6]}_{fold_n}.zip"
-    joblib.dump(m, fn, compress=3)
+    fn = f"xgb_{f'{score:.4f}'[2:6]}_{fold_n}.json"
+    m.get_booster().save_model(fn)
     print(f"wrote {fn}")
 ```
 
@@ -182,7 +190,7 @@ for fold_n, m in enumerate(xgb_models, 1):
     [1999]	validation_0-rmse:10.83845	validation_1-rmse:11.07211
     | ID | GPU | MEM |
     ------------------
-    |  0 | 51% |  4% |
+    |  0 |  0% |  1% |
     |  1 |  0% |  0% |
     
       fold 2
@@ -193,7 +201,7 @@ for fold_n, m in enumerate(xgb_models, 1):
     [1999]	validation_0-rmse:10.85455	validation_1-rmse:10.99577
     | ID | GPU | MEM |
     ------------------
-    |  0 | 43% |  4% |
+    |  0 | 23% |  2% |
     |  1 |  0% |  0% |
     
       fold 3
@@ -204,7 +212,7 @@ for fold_n, m in enumerate(xgb_models, 1):
     [1999]	validation_0-rmse:10.84202	validation_1-rmse:11.06395
     | ID | GPU | MEM |
     ------------------
-    |  0 | 52% |  4% |
+    |  0 | 36% |  2% |
     |  1 |  0% |  0% |
     
       fold 4
@@ -215,7 +223,7 @@ for fold_n, m in enumerate(xgb_models, 1):
     [1999]	validation_0-rmse:10.84942	validation_1-rmse:11.04161
     | ID | GPU | MEM |
     ------------------
-    |  0 | 40% |  4% |
+    |  0 | 43% |  2% |
     |  1 |  0% |  0% |
     
       fold 5
@@ -226,15 +234,15 @@ for fold_n, m in enumerate(xgb_models, 1):
     [1999]	validation_0-rmse:10.84913	validation_1-rmse:11.03351
     | ID | GPU | MEM |
     ------------------
-    |  0 | 38% |  4% |
+    |  0 | 49% |  2% |
     |  1 |  0% |  0% |
     
     xgboost score: 0.1660
-    wrote xgb_1660_1.zip
-    wrote xgb_1660_2.zip
-    wrote xgb_1660_3.zip
-    wrote xgb_1660_4.zip
-    wrote xgb_1660_5.zip
+    wrote xgb_1660_1.json
+    wrote xgb_1660_2.json
+    wrote xgb_1660_3.json
+    wrote xgb_1660_4.json
+    wrote xgb_1660_5.json
 
 
 
@@ -268,7 +276,7 @@ mse_ = torch.nn.MSELoss()
 
 
 def mse(y_pred_epoch, i):
-    return loss_fn(y_pred_epoch, y[i].view(-1, 1))
+    return mse_(y_pred_epoch, y[i].view(-1, 1))
 
 
 def aslist(param):
@@ -317,29 +325,27 @@ for fold_n, (i_fold, i_oof) in enumerate(kfold.split(X_df.index), 1):
 
     for epoch_n in range(1, n_epochs + 1):
         y_pred_epoch_fold = forward(i_fold)
-        loss_fold_epoch = mse(y_pred_epoch_fold, i_fold)
+        mse_epoch_fold = mse(y_pred_epoch_fold, i_fold)
         optimizer.zero_grad()
-        loss_fold_epoch.backward()
+        mse_epoch_fold.backward()
         optimizer.step()
 
-        with torch.no_grad():
-            y_pred_epoch_oof = forward(i_oof)
-            loss_oof_epoch = mse(y_pred_epoch_oof, i_oof)
+        if (epoch_n % (n_epochs // 2) == 0) or (epoch_n > (n_epochs - 3)):
+            with torch.no_grad():
+                y_pred_epoch_oof = forward(i_oof)
+                mse_epoch_oof = mse(y_pred_epoch_oof, i_oof)
 
-        if epoch_n > (n_epochs - 3):
             print(
                 f"    epoch {epoch_n:>6}: "
-                f"fold={loss_fold_epoch.item():.4f} "
-                f"oof={loss_oof_epoch.item():.4f}"
+                f"fold={mse_epoch_fold.item():.4f} "
+                f"oof={mse_epoch_oof.item():.4f}"
             )
 
     with torch.no_grad():
         y_pred_oof[i_oof] = forward(i_oof).flatten()
 
     GPUtil.showUtilization()
-
     torch_models.append(aspy(m))
-
     print()
 
 y_pred_oof = scaler_y.inverse_transform(
@@ -360,56 +366,61 @@ for fold_n, m in enumerate(torch_models, 1):
     X:    torch.Size([202033, 112])
     y:    torch.Size([202033])
       fold 1
-        epoch    998: fold=0.4307 oof=0.4456
-        epoch    999: fold=0.4307 oof=0.4457
-        epoch   1000: fold=0.4307 oof=0.4457
+        epoch    500: fold=0.4375 oof=0.4466
+        epoch    998: fold=0.4324 oof=0.4458
+        epoch    999: fold=0.4324 oof=0.4457
+        epoch   1000: fold=0.4324 oof=0.4459
     | ID | GPU | MEM |
     ------------------
-    |  0 | 87% |  4% |
+    |  0 | 91% |  4% |
     |  1 |  0% |  0% |
     
       fold 2
-        epoch    998: fold=0.4336 oof=0.4400
-        epoch    999: fold=0.4336 oof=0.4400
-        epoch   1000: fold=0.4336 oof=0.4400
+        epoch    500: fold=0.4393 oof=0.4413
+        epoch    998: fold=0.4341 oof=0.4404
+        epoch    999: fold=0.4341 oof=0.4405
+        epoch   1000: fold=0.4341 oof=0.4404
     | ID | GPU | MEM |
     ------------------
-    |  0 | 88% |  4% |
+    |  0 | 91% |  4% |
     |  1 |  0% |  0% |
     
       fold 3
-        epoch    998: fold=0.4317 oof=0.4445
-        epoch    999: fold=0.4317 oof=0.4446
-        epoch   1000: fold=0.4317 oof=0.4445
+        epoch    500: fold=0.4405 oof=0.4473
+        epoch    998: fold=0.4345 oof=0.4445
+        epoch    999: fold=0.4345 oof=0.4445
+        epoch   1000: fold=0.4345 oof=0.4445
     | ID | GPU | MEM |
     ------------------
-    |  0 | 80% |  4% |
+    |  0 | 90% |  4% |
     |  1 |  0% |  0% |
     
       fold 4
-        epoch    998: fold=0.4333 oof=0.4429
-        epoch    999: fold=0.4333 oof=0.4430
-        epoch   1000: fold=0.4332 oof=0.4429
+        epoch    500: fold=0.4390 oof=0.4445
+        epoch    998: fold=0.4337 oof=0.4431
+        epoch    999: fold=0.4336 oof=0.4432
+        epoch   1000: fold=0.4336 oof=0.4431
     | ID | GPU | MEM |
     ------------------
-    |  0 | 87% |  4% |
+    |  0 | 90% |  4% |
     |  1 |  0% |  0% |
     
       fold 5
-        epoch    998: fold=0.4318 oof=0.4433
-        epoch    999: fold=0.4318 oof=0.4433
-        epoch   1000: fold=0.4318 oof=0.4433
+        epoch    500: fold=0.4394 oof=0.4433
+        epoch    998: fold=0.4341 oof=0.4420
+        epoch    999: fold=0.4341 oof=0.4420
+        epoch   1000: fold=0.4341 oof=0.4420
     | ID | GPU | MEM |
     ------------------
-    |  0 | 88% |  4% |
+    |  0 | 91% |  4% |
     |  1 |  0% |  0% |
     
-    torch score:   0.1649
-    wrote nn_1649_1.json
-    wrote nn_1649_2.json
-    wrote nn_1649_3.json
-    wrote nn_1649_4.json
-    wrote nn_1649_5.json
+    torch score:   0.1648
+    wrote nn_1648_1.json
+    wrote nn_1648_2.json
+    wrote nn_1648_3.json
+    wrote nn_1648_4.json
+    wrote nn_1648_5.json
 
 
 
